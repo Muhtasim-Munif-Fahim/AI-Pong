@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Pong - Reinforcement Learning</title>
+    <style>
+        /* Modern Minimal Design */
+        .ai-pong-container * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .ai-pong-container {
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Clean Header */
+        .game-header {
+            text-align: center;
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .game-header h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            color: #00d4ff;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .game-header p {
+            font-size: 1.1rem;
+            color: #a0a0a0;
+            font-weight: 300;
+            line-height: 1.6;
+        }
+
+        /* Minimal Grid Layout */
+        .game-main {
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            height: calc(100vh - 200px);
+        }
+
+        /* Clean Cards */
+        .card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #00d4ff;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Game Area - Fixed border overflow */
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Elegant Score Display */
+        .score-display {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+            margin-bottom: 2rem;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .score-item {
+            text-align: center;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            margin-bottom: 0.5rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+        }
+
+        .score-value {
+            font-size: 3rem;
+            font-weight: 200;
+            line-height: 1;
+        }
+
+        .player-score .score-value {
+            color: #00d4ff;
+        }
+
+        .ai-score .score-value {
+            color: #ff6b6b;
+        }
+
+        .vs-separator {
+            font-size: 1.2rem;
+            color: #666;
+            font-weight: 300;
+        }
+
+        /* Fixed Canvas - No border overflow */
+        #gameCanvas {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            background: #000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .canvas-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        /* Minimal Stats */
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            font-weight: 400;
+        }
+
+        .stat-value {
+            font-size: 0.9rem;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .stat-value.highlight {
+            color: #00d4ff;
+        }
+
+        /* Modern Buttons */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: auto;
+        }
+
+        .button {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .button:hover {
+            background: rgba(0, 212, 255, 0.15);
+            border-color: rgba(0, 212, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .button.primary {
+            background: #00d4ff;
+            color: #000;
+            border-color: #00d4ff;
+        }
+
+        .button.primary:hover {
+            background: #00b8e6;
+            border-color: #00b8e6;
+        }
+
+        /* AI Status Indicator */
+        .ai-status {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(255, 107, 107, 0.08);
+            border: 1px solid rgba(255, 107, 107, 0.15);
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .ai-level {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #ff6b6b;
+            margin-bottom: 0.5rem;
+        }
+
+        .ai-progress {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        /* Enhanced Learning Visualization */
+        .learning-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-top: 1rem;
+        }
+
+        .learning-header {
+            margin-bottom: 1rem;
+        }
+
+        .learning-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: #00d4ff;
+            margin-bottom: 0.5rem;
+        }
+
+        .learning-description {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            line-height: 1.4;
+            margin-bottom: 1rem;
+        }
+
+        #learningGraph {
+            width: 100%;
+            height: 140px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .graph-legend {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        .legend-positive {
+            background: #00d4ff;
+        }
+
+        .legend-negative {
+            background: #ff6b6b;
+        }
+
+        /* Pause Indicator */
+        .pause-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #ff6b6b;
+            display: none;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        /* Game Over Modal */
+        .game-over-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .game-over-content {
+            text-align: center;
+            background: rgba(15, 15, 35, 0.95);
+            padding: 3rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+        }
+
+        .game-over-content h2 {
+            font-size: 1.8rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+            color: #00d4ff;
+        }
+
+        .game-over-content p {
+            color: #a0a0a0;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .game-main {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                height: auto;
+            }
+            
+            .game-area {
+                order: -1;
+                height: auto;
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .ai-pong-container {
+                padding: 1rem;
+            }
+            
+            .game-header h1 {
+                font-size: 2rem;
+            }
+            
+            .score-display {
+                gap: 1.5rem;
+                padding: 1rem;
+            }
+            
+            .score-value {
+                font-size: 2.5rem;
+            }
+            
+            .canvas-container {
+                padding: 0.5rem;
+            }
+            
+            #gameCanvas {
+                width: 100%;
+                max-width: 350px;
+                height: 175px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ai-pong-container">
+        <!-- Clean Header -->
+        <div class="game-header">
+            <h1>AI Pong</h1>
+            <p>Watch artificial intelligence learn to play from scratch - fast!</p>
+        </div>
+
+        <div class="game-main">
+            <!-- Left Panel: Essential Stats -->
+            <div class="card">
+                <div class="card-title">Game Stats</div>
+                <div class="stat-item">
+                    <span class="stat-label">Duration</span>
+                    <span class="stat-value" id="gameTime">0:00</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Games Played</span>
+                    <span class="stat-value" id="gamesPlayed">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Ball Speed</span>
+                    <span class="stat-value" id="ballSpeed">5.0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">AI Evolution</span>
+                    <span class="stat-value highlight" id="aiEvolution">Just Born</span>
+                </div>
+
+                <div class="button-group">
+                    <button class="button primary" onclick="togglePause()">⏯ Pause</button>
+                    <button class="button" onclick="resetGame()">🔄 New Game</button>
+                    <button class="button" id="soundBtn" onclick="toggleSound()">🔊 Sound</button>
+                    <button class="button" onclick="exportModel()">💾 Export</button>
+                </div>
+            </div>
+
+            <!-- Center: Game Area -->
+            <div class="game-area">
+                <div class="score-display">
+                    <div class="score-item player-score">
+                        <div class="score-label">YOU</div>
+                        <div class="score-value" id="playerScore">0</div>
+                    </div>
+                    <div class="vs-separator">—</div>
+                    <div class="score-item ai-score">
+                        <div class="score-label">AI</div>
+                        <div class="score-value" id="aiScore">0</div>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="gameCanvas" width="800" height="400"></canvas>
+                </div>
+                <div class="pause-indicator" id="pauseIndicator">⏸ Paused</div>
+            </div>
+
+            <!-- Right Panel: AI Learning -->
+            <div class="card">
+                <div class="card-title">AI Learning</div>
+                <div class="stat-item">
+                    <span class="stat-label">Skill Level</span>
+                    <span class="stat-value highlight" id="aiSkill">Clueless</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Hit Rate</span>
+                    <span class="stat-value" id="aiAccuracy">0%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Reaction Time</span>
+                    <span class="stat-value" id="aiReaction">1.5s</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Learning</span>
+                    <span class="stat-value" id="epsilon">0%</span>
+                </div>
+
+                <div class="ai-status">
+                    <div class="ai-level" id="aiLevel">Completely Lost</div>
+                    <div class="ai-progress" id="aiStrategy">Moving randomly, has no idea what's happening</div>
+                </div>
+
+                <div class="learning-section">
+                    <div class="learning-header">
+                        <div class="learning-title">Learning Progress</div>
+                        <div class="learning-description">
+                            Watch the AI evolve rapidly! It starts clueless but learns fast. Each game makes it noticeably smarter.
+                        </div>
+                    </div>
+                    <canvas id="learningGraph"></canvas>
+                    <div class="graph-legend">
+                        <div class="legend-item">
+                            <div class="legend-color legend-positive"></div>
+                            <span>Success</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color legend-negative"></div>
+                            <span>Failure</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div class="game-over-overlay" id="gameOverOverlay">
+            <div class="game-over-content">
+                <h2 id="gameOverTitle">Game Over</h2>
+                <p id="gameOverMessage"></p>
+                <button class="button primary" onclick="startNewGame()">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // AI Pong with FAST Learning AI (visible progress in minutes, not hours)
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const graphCanvas = document.getElementById('learningGraph');
+        const graphCtx = graphCanvas.getContext('2d');
+
+        // Prevent scrolling with arrow keys
+        document.addEventListener('keydown', function(e) {
+            if(['ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        // Game State
+        let gameRunning = true;
+        let gamesPaused = false;
+        let gameOver = false;
+        let playerScore = 0;
+        let aiScore = 0;
+        let rallies = 0;
+        let soundEnabled = true;
+        let gameStartTime = Date.now();
+        let gamesPlayed = 0;
+        let totalBallsTowardsAI = 0;
+        let aiSuccessfulHits = 0;
+
+        // Game Objects
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            dx: 5,
+            dy: 2,
+            radius: 6,
+            speed: 5,
+            maxSpeed: 10
+        };
+
+        const playerPaddle = {
+            x: 30,
+            y: canvas.height / 2 - 40,
+            width: 8,
+            height: 80,
+            speed: 8
+        };
+
+        const aiPaddle = {
+            x: canvas.width - 38,
+            y: canvas.height / 2 - 40,
+            width: 8,
+            height: 80,
+            speed: 2, // Start VERY slow
+            targetY: canvas.height / 2 - 40
+        };
+
+        // FAST Learning AI (shows progress quickly for visitors)
+        class FastLearningAI {
+            constructor() {
+                // Start with zero knowledge but learn FAST
+                this.learningProgress = 0; // 0 to 100
+                this.skillLevel = 'Clueless';
+                this.hitRate = 0;
+                this.reactionTime = 1.5; // Start slower but improve quickly
+                this.strategy = 'Moving randomly, has no idea what\'s happening';
+                this.frameCount = 0;
+                this.lastDecision = 0;
+                this.rewardHistory = [];
+                this.totalExperience = 0;
+                this.successfulActions = 0;
+                this.totalActions = 0;
+                
+                // Learning parameters - MUCH faster progression
+                this.randomMoveProbability = 1.0; // Start 100% random
+                this.ballTrackingAccuracy = 0.0; // Start with 0% accuracy
+                this.predictionAbility = 0.0; // No prediction at start
+            }
+
+            update() {
+                this.frameCount++;
+                this.updateLearning();
+                
+                // Make decisions based on current reaction time
+                if (this.frameCount - this.lastDecision > this.reactionTime * 60) {
+                    this.makeDecision();
+                    this.lastDecision = this.frameCount;
+                }
+                
+                this.smoothMove();
+            }
+
+            updateLearning() {
+                // MUCH faster learning - progress based on games played, not just experience
+                // Each game contributes significantly to learning
+                const gameBonus = gamesPlayed * 8; // Each game = big learning boost
+                const experienceBonus = this.totalExperience * 0.5;
+                this.learningProgress = Math.min((gameBonus + experienceBonus) / 10, 100);
+                
+                // Update AI capabilities based on learning progress - FAST progression
+                if (this.learningProgress < 8) {
+                    this.skillLevel = 'Clueless';
+                    this.randomMoveProbability = 1.0;
+                    this.ballTrackingAccuracy = 0.0;
+                    this.reactionTime = 1.5;
+                    this.strategy = 'Moving randomly, has no idea what\'s happening';
+                    aiPaddle.speed = 2;
+                } else if (this.learningProgress < 18) {
+                    this.skillLevel = 'Confused';
+                    this.randomMoveProbability = 0.7;
+                    this.ballTrackingAccuracy = 0.2;
+                    this.reactionTime = 1.2;
+                    this.strategy = 'Starting to notice the ball exists';
+                    aiPaddle.speed = 3;
+                } else if (this.learningProgress < 35) {
+                    this.skillLevel = 'Learning';
+                    this.randomMoveProbability = 0.5;
+                    this.ballTrackingAccuracy = 0.4;
+                    this.reactionTime = 1.0;
+                    this.strategy = 'Trying to follow the ball, getting better';
+                    aiPaddle.speed = 4;
+                } else if (this.learningProgress < 50) {
+                    this.skillLevel = 'Beginner';
+                    this.randomMoveProbability = 0.3;
+                    this.ballTrackingAccuracy = 0.6;
+                    this.reactionTime = 0.8;
+                    this.strategy = 'Basic ball tracking, understanding the game';
+                    aiPaddle.speed = 5;
+                } else if (this.learningProgress < 70) {
+                    this.skillLevel = 'Improving';
+                    this.randomMoveProbability = 0.15;
+                    this.ballTrackingAccuracy = 0.8;
+                    this.reactionTime = 0.5;
+                    this.strategy = 'Predicting ball movement, getting strategic';
+                    aiPaddle.speed = 6;
+                } else if (this.learningProgress < 85) {
+                    this.skillLevel = 'Competent';
+                    this.randomMoveProbability = 0.07;
+                    this.ballTrackingAccuracy = 0.9;
+                    this.reactionTime = 0.3;
+                    this.strategy = 'Strategic positioning, reading your moves';
+                    aiPaddle.speed = 7;
+                } else {
+                    this.skillLevel = 'Expert';
+                    this.randomMoveProbability = 0.03;
+                    this.ballTrackingAccuracy = 0.98;
+                    this.reactionTime = 0.15;
+                    this.strategy = 'Perfect prediction, calculating optimal angles';
+                    aiPaddle.speed = 8;
+                }
+
+                // Calculate hit rate
+                this.hitRate = totalBallsTowardsAI > 0 ? (aiSuccessfulHits / totalBallsTowardsAI) * 100 : 0;
+            }
+
+            makeDecision() {
+                this.totalActions++;
+                
+                // Decide if this will be a random move or learned behavior
+                if (Math.random() < this.randomMoveProbability) {
+                    // Random movement (AI doesn't know what it's doing)
+                    const randomChoice = Math.random();
+                    if (randomChoice < 0.33) {
+                        aiPaddle.targetY = Math.max(0, aiPaddle.targetY - 40);
+                    } else if (randomChoice < 0.66) {
+                        aiPaddle.targetY = Math.min(canvas.height - aiPaddle.height, aiPaddle.targetY + 40);
+                    }
+                    // else stay in place (33% chance)
+                } else {
+                    // Learned behavior - track the ball with current accuracy
+                    let targetY = ball.y;
+                    
+                    // Add prediction for higher skill levels
+                    if (this.learningProgress > 25 && ball.dx > 0) {
+                        const timeToReach = (aiPaddle.x - ball.x) / ball.dx;
+                        targetY = ball.y + (ball.dy * timeToReach);
+                        
+                        // Handle wall bounces for advanced AI
+                        if (this.learningProgress > 60) {
+                            if (targetY < 0) targetY = -targetY;
+                            if (targetY > canvas.height) targetY = 2 * canvas.height - targetY;
+                        }
+                    }
+                    
+                    // Apply accuracy - add error based on skill
+                    const error = (1 - this.ballTrackingAccuracy) * 120 * (Math.random() - 0.5);
+                    targetY += error;
+                    
+                    aiPaddle.targetY = Math.max(0, Math.min(canvas.height - aiPaddle.height, targetY - aiPaddle.height / 2));
+                    this.successfulActions++;
+                }
+            }
+
+            smoothMove() {
+                const diff = aiPaddle.targetY - aiPaddle.y;
+                if (Math.abs(diff) > 1) {
+                    const moveAmount = Math.sign(diff) * Math.min(aiPaddle.speed, Math.abs(diff));
+                    aiPaddle.y += moveAmount;
+                }
+            }
+
+            addExperience(reward) {
+                // Faster experience gain
+                this.totalExperience += Math.abs(reward) * 0.3; // 3x faster learning
+                this.rewardHistory.push(reward);
+                if (this.rewardHistory.length > 50) {
+                    this.rewardHistory = this.rewardHistory.slice(-25);
+                }
+            }
+
+            getEvolutionStage() {
+                if (this.learningProgress < 10) return 'Just Born';
+                if (this.learningProgress < 25) return 'Infant';
+                if (this.learningProgress < 40) return 'Child';
+                if (this.learningProgress < 60) return 'Teenager';
+                if (this.learningProgress < 80) return 'Adult';
+                return 'Master';
+            }
+        }
+
+        const ai = new FastLearningAI();
+
+        // Input Handling
+        const keys = {};
+        document.addEventListener('keydown', (e) => keys[e.key] = true);
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        // Touch Controls
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const y = touch.clientY - rect.top;
+            
+            if (y < canvas.height / 2) {
+                keys['ArrowUp'] = true;
+                setTimeout(() => keys['ArrowUp'] = false, 100);
+            } else {
+                keys['ArrowDown'] = true;
+                setTimeout(() => keys['ArrowDown'] = false, 100);
+            }
+        });
+
+        // Audio
+        let audioContext;
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+        
+        function playSound(frequency, duration) {
+            if (!soundEnabled || !audioContext) return;
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }
+
+        // Game Logic
+        function updatePlayerPaddle() {
+            if ((keys['w'] || keys['W'] || keys['ArrowUp']) && playerPaddle.y > 0) {
+                playerPaddle.y -= playerPaddle.speed;
+            }
+            if ((keys['s'] || keys['S'] || keys['ArrowDown']) && playerPaddle.y < canvas.height - playerPaddle.height) {
+                playerPaddle.y += playerPaddle.speed;
+            }
+        }
+
+        function updateBall() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Track when ball is heading towards AI
+            if (ball.dx > 0) {
+                totalBallsTowardsAI++;
+            }
+
+            // Wall collisions
+            if (ball.y <= ball.radius || ball.y >= canvas.height - ball.radius) {
+                ball.dy = -ball.dy;
+                playSound(800, 0.1);
+            }
+
+            // Player paddle collision
+            if (ball.x <= playerPaddle.x + playerPaddle.width + ball.radius &&
+                ball.y >= playerPaddle.y - ball.radius &&
+                ball.y <= playerPaddle.y + playerPaddle.height + ball.radius &&
+                ball.dx < 0) {
+                
+                ball.dx = -ball.dx;
+                const hitPos = (ball.y - (playerPaddle.y + playerPaddle.height/2)) / (playerPaddle.height/2);
+                ball.dy = hitPos * Math.abs(ball.dx) * 0.5;
+                ball.dx = Math.min(ball.dx + 0.1, ball.maxSpeed);
+                
+                playSound(440, 0.1);
+                ai.addExperience(1);
+                rallies++;
+            }
+
+            // AI paddle collision
+            if (ball.x >= aiPaddle.x - ball.radius &&
+                ball.y >= aiPaddle.y - ball.radius &&
+                ball.y <= aiPaddle.y + aiPaddle.height + ball.radius &&
+                ball.dx > 0) {
+                
+                ball.dx = -ball.dx;
+                const hitPos = (ball.y - (aiPaddle.y + aiPaddle.height/2)) / (aiPaddle.height/2);
+                ball.dy = hitPos * Math.abs(ball.dx) * 0.5;
+                ball.dx = Math.max(ball.dx - 0.1, -ball.maxSpeed);
+                
+                playSound(660, 0.1);
+                ai.addExperience(15); // Big reward for successful hit
+                aiSuccessfulHits++;
+                rallies++;
+            }
+
+            // Scoring
+            if (ball.x < 0) {
+                aiScore++;
+                ai.addExperience(30); // Huge reward for scoring
+                resetBall();
+                playSound(220, 0.3);
+                checkGameOver();
+            } else if (ball.x > canvas.width) {
+                playerScore++;
+                ai.addExperience(-10); // Smaller penalty to encourage learning
+                resetBall();
+                playSound(330, 0.3);
+                checkGameOver();
+            }
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = (Math.random() > 0.5 ? 1 : -1) * ball.speed;
+            ball.dy = (Math.random() - 0.5) * ball.speed * 0.6;
+        }
+
+        function checkGameOver() {
+            if (playerScore >= 10 || aiScore >= 10) {
+                gameOver = true;
+                gamesPlayed++; // Count completed games for faster learning
+                showGameOver();
+            }
+        }
+
+        function showGameOver() {
+            const overlay = document.getElementById('gameOverOverlay');
+            const title = document.getElementById('gameOverTitle');
+            const message = document.getElementById('gameOverMessage');
+            
+            if (playerScore >= 10) {
+                title.textContent = 'You Win!';
+                message.textContent = `You beat the AI ${playerScore}-${aiScore}! The AI evolved to "${ai.skillLevel}" level (${ai.learningProgress.toFixed(0)}% learned) with ${ai.hitRate.toFixed(1)}% hit rate.`;
+            } else {
+                title.textContent = 'AI Wins!';
+                message.textContent = `The AI won ${aiScore}-${playerScore}! It rapidly evolved to "${ai.skillLevel}" level (${ai.learningProgress.toFixed(0)}% learned) and achieved ${ai.hitRate.toFixed(1)}% hit rate.`;
+            }
+            
+            overlay.style.display = 'flex';
+            playSound(aiScore >= 10 ? 200 : 400, 0.5);
+        }
+
+        // Rendering
+        function drawPaddle(paddle, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#00d4ff';
+            ctx.fill();
+        }
+
+        function drawCourt() {
+            // Center line
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function updateStats() {
+            document.getElementById('playerScore').textContent = playerScore;
+            document.getElementById('aiScore').textContent = aiScore;
+            document.getElementById('gamesPlayed').textContent = gamesPlayed;
+            document.getElementById('ballSpeed').textContent = Math.abs(ball.dx).toFixed(1);
+            document.getElementById('aiEvolution').textContent = ai.getEvolutionStage();
+            document.getElementById('aiSkill').textContent = ai.skillLevel;
+            document.getElementById('aiAccuracy').textContent = ai.hitRate.toFixed(1) + '%';
+            document.getElementById('aiReaction').textContent = ai.reactionTime.toFixed(1) + 's';
+            document.getElementById('epsilon').textContent = Math.round(ai.learningProgress) + '%';
+            document.getElementById('aiLevel').textContent = ai.skillLevel;
+            document.getElementById('aiStrategy').textContent = ai.strategy;
+            
+            const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('gameTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Learning Graph with Clear Progression
+        function drawLearningGraph() {
+            const ctx = graphCtx;
+            const width = graphCanvas.width;
+            const height = graphCanvas.height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            if (ai.rewardHistory.length < 2) {
+                // Show placeholder text when no data
+                ctx.fillStyle = '#666';
+                ctx.font = '12px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText('AI evolution in progress...', width / 2, height / 2);
+                return;
+            }
+            
+            const rewards = ai.rewardHistory;
+            const maxReward = Math.max(...rewards, 1);
+            const minReward = Math.min(...rewards, -1);
+            const range = maxReward - minReward || 1;
+            
+            // Draw background grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = (i / 4) * height;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            
+            // Draw reward line with gradient showing improvement
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            for (let i = 0; i < rewards.length; i++) {
+                const x = (i / (rewards.length - 1)) * width;
+                const y = height - ((rewards[i] - minReward) / range) * height;
+                
+                // Color based on reward value and progress
+                if (rewards[i] > 0) {
+                    ctx.strokeStyle = '#00d4ff';
+                } else {
+                    ctx.strokeStyle = '#ff6b6b';
+                }
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // Draw zero line
+            const zeroY = height - ((-minReward) / range) * height;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(0, zeroY);
+            ctx.lineTo(width, zeroY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Game Loop
+        function gameLoop() {
+            if (!gamesPaused && !gameOver) {
+                // Clear canvas with fade effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                updatePlayerPaddle();
+                updateBall();
+                ai.update();
+                
+                drawCourt();
+                drawPaddle(playerPaddle, '#00d4ff');
+                drawPaddle(aiPaddle, '#ff6b6b');
+                drawBall();
+                
+                updateStats();
+                drawLearningGraph();
+            }
+            
+            document.getElementById('pauseIndicator').style.display = gamesPaused ? 'block' : 'none';
+            
+            if (gameRunning) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Controls
+        function resetGame() {
+            playerScore = 0;
+            aiScore = 0;
+            rallies = 0;
+            totalBallsTowardsAI = 0;
+            aiSuccessfulHits = 0;
+            gameStartTime = Date.now();
+            resetBall();
+            // Don't reset AI learning - let it keep its knowledge across games
+        }
+
+        function startNewGame() {
+            gameOver = false;
+            document.getElementById('gameOverOverlay').style.display = 'none';
+            resetGame();
+        }
+
+        function togglePause() {
+            gamesPaused = !gamesPaused;
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('soundBtn');
+            btn.textContent = soundEnabled ? '🔊 Sound' : '🔇 Muted';
+        }
+
+        function exportModel() {
+            const model = {
+                skillLevel: ai.skillLevel,
+                learningProgress: ai.learningProgress,
+                hitRate: ai.hitRate,
+                reactionTime: ai.reactionTime,
+                totalExperience: ai.totalExperience,
+                gamesPlayed: gamesPlayed,
+                evolutionStage: ai.getEvolutionStage(),
+                rewardHistory: ai.rewardHistory,
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(model, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai_pong_${ai.skillLevel}_${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize game
+        console.log('🚀 Fast-Learning AI Pong Starting - Watch rapid evolution!');
+        gameLoop();
+    </script>
+</body>
+</html>
